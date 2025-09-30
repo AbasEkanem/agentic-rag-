@@ -1,1 +1,575 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SLOT.NG-Smartphone Agent</title>
+  <style>
+    /* Base Reset */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background-color: #fff; color: #000;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      display: flex; justify-content: center; align-items: center;
+      height: 100vh; overflow: hidden;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    body.dark { background-color: #000; color: #fff; }
 
+    .chat-wrapper {
+      width: 480px; max-width: 100vw;
+      height: 680px; max-height: 100vh;
+      display: flex; flex-direction: column;
+      background: #fff; border-radius: 20px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.15);
+      overflow: hidden; position: relative;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    body.dark .chat-wrapper {
+      background-color: #121212;
+      box-shadow: 0 0 10px rgba(255,255,255,0.15);
+    }
+
+    header.chat-header {
+      flex-shrink: 0; padding: 20px 28px;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid #ccc; font-weight: 700; font-size: 1.3rem;
+      background: transparent; color: inherit;
+    }
+    body.dark header.chat-header { border-color: #444; }
+
+    /* Theme toggle button */
+    .theme-toggle{
+      cursor: pointer; width: 32px; height: 32px; display:flex; align-items:center; justify-content:center;
+      border-radius: 50%; transition: background-color .3s ease, color .3s ease;
+      color:#444; font-size:1.4rem; user-select:none; border:2px solid transparent;
+    }
+    .theme-toggle:hover{ background-color: rgba(0,0,0,0.1); color:#000; border-color:#000; }
+    body.dark .theme-toggle{ color:#bbb; }
+    body.dark .theme-toggle:hover{ background-color: rgba(255,255,255,0.15); color:#fff; border-color:#fff; }
+
+    /* Messages container */
+    .messages {
+      flex:1; padding:24px 30px; overflow-y:auto; display:flex; flex-direction:column; gap:18px;
+      scroll-behavior:smooth; scrollbar-width:thin; scrollbar-color:#888 transparent; background:transparent; color:inherit;
+      transition: color 0.3s ease;
+    }
+    .messages::-webkit-scrollbar{ width:8px; }
+    .messages::-webkit-scrollbar-track{ background:transparent; }
+    .messages::-webkit-scrollbar-thumb{ background-color:#888; border-radius:4px; border:2px solid transparent; background-clip:content-box; }
+    body.dark .messages::-webkit-scrollbar-thumb{ background-color:#aaa; }
+
+    /* Message bubbles */
+    .message {
+      max-width:75%; padding:14px 22px; border-radius:20px;
+      font-size:1rem; line-height:1.5; white-space:pre-wrap; user-select:text; position:relative;
+      background-color:#f0f0f0a1; color:#000; box-shadow:0 2px 8px rgba(0,0,0,0.1);
+      transition: background-color .3s ease, color .3s ease; animation: fade-in .18s ease forwards;
+    }
+    .message.user{
+      background:#000; color:#6f7275; margin-left:auto; border-bottom-right-radius:6px;
+      box-shadow:1px 1px 6px rgba(0,0,0,0.4);
+    }
+    body.dark .message{ background-color:#222; color:#eee; box-shadow:0 2px 8px rgba(255,255,255,0.1); }
+    body.dark .message.user{ background:#ffffff91; color:#000; box-shadow:1px 1px 6px rgba(255,255,255,0.4); }
+
+    /* AI messages: NO container — plain text that blends with the background */
+    .message.ai{
+      background: transparent !important;
+      color: inherit !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      max-width: 100% !important;
+      border-radius: 0 !important;
+      margin-right: auto;
+    }
+    body.dark .message.ai{ color: inherit; }
+
+    .typing { display:none !important; }
+
+    @keyframes fade-in { from {opacity:0; transform: translateY(10px);} to {opacity:1; transform: translateY(0);} }
+
+    /* Chat input area */
+    form.chat-input-area {
+      flex-shrink:0; border-top:1px solid #ccc; background:transparent; padding:16px 24px; display:flex; gap:14px; align-items:center;
+      transition:border-color .3s ease; color:inherit;
+    }
+    body.dark form.chat-input-area{ border-top-color:#444; }
+    textarea#chat-input{
+      width:100%; resize:none; border-radius:20px; border:1px solid #ccc; padding:14px 24px; font-size:1rem; font-weight:400;
+      color:#000; background-color:#fafafa; outline-offset:2px; min-height:44px; line-height:1.4; overflow-y:hidden;
+      transition: border-color .3s ease, background-color .3s ease, color .3s ease; box-shadow: inset 1px 1px 3px #ddd;
+    }
+    textarea#chat-input::placeholder{ color:#999; }
+    textarea#chat-input:focus{ border-color:#000; background-color:#fff; color:#000; box-shadow:0 0 6px #444; }
+    body.dark textarea#chat-input{ color:#eee; border-color:#444; background-color:#222; box-shadow: inset 1px 1px 3px #333; }
+    body.dark textarea#chat-input::placeholder{ color:#bbb; }
+    body.dark textarea#chat-input:focus{ border-color:#fff; background-color:#000; color:#fff; box-shadow:0 0 8px #fff; }
+
+    .button-group { display:flex; gap:12px; flex-shrink:0; }
+
+    button#send-btn{
+      border:none; background-color:#000; color:#fff; width:48px; height:48px; border-radius:50%; cursor:pointer;
+      display:flex; justify-content:center; align-items:center; font-size:22px;
+      transition: background-color .3s ease, transform .15s ease; user-select:none; box-shadow:0 4px 8px rgba(0,0,0,0.3);
+    }
+    button#send-btn:hover:not(:disabled){ background-color:#222; box-shadow:0 6px 10px rgba(0,0,0,0.5); transform: translateY(-2px); }
+    button#send-btn:active:not(:disabled){ transform: translateY(0); box-shadow:0 3px 6px rgba(0,0,0,0.4); }
+    button#send-btn:disabled{ background-color:#666; cursor: default; box-shadow:none; }
+
+    button#stop-btn{
+      background-color: transparent; color: currentColor; border: none;
+      width: 30px; height: 30px; border-radius: 6px; font-size: 18px; font-weight: 600;
+      cursor: pointer; display: none;
+      justify-content:center; align-items:center; align-self:center;
+      transition: background-color .2s ease, color .2s ease, transform .1s ease;
+      user-select:none; line-height:1; color:#444;
+    }
+    button#stop-btn:hover{ background-color: rgba(0,0,0,0.1); color:#000; transform: scale(1.1); outline:none; }
+    body.dark button#stop-btn{ color:#ccc; }
+    body.dark button#stop-btn:hover{ background-color: rgba(255,255,255,0.15); color:#fff; }
+    button#stop-btn:active{ transform: scale(1); background-color: rgba(0,0,0,0.2); }
+    body.dark button#stop-btn:active{ background-color: rgba(255,255,255,0.25); }
+    button#stop-btn:focus{ outline:2px solid #0078D4; outline-offset:2px; }
+
+    .cursor{ display:inline-block; width:1px; background-color: currentColor; animation: blink 1.1s infinite; vertical-align:bottom; margin-left:2px; height:1.1em; }
+    @keyframes blink{ 0%,50%{opacity:1;} 50.01%,100%{opacity:0;} }
+
+    /* Thinking / Tool-call UX */
+    .thinking-wrap{
+      position:absolute; left:16px; right:16px; bottom:76px;
+      pointer-events:none;
+    }
+    .thinking-bar{
+      display:none;
+      gap:12px; align-items:center; padding:0; border-radius:0;
+      background: transparent !important; border:none !important; color:inherit;
+      backdrop-filter:none !important;
+    }
+    .thinking-icon{ width:18px; height:18px; border-radius:50%; border:2px solid currentColor; border-top-color: transparent; animation: spin 1s linear infinite; }
+    @keyframes spin{ to { transform: rotate(360deg);} }
+    .thinking-text{ font-size:.95rem; line-height:1.25; }
+    .thinking-subtext{ display:inline-block; font-size:.85rem; opacity:.7; margin-left:8px; }
+
+    .tool-pulse{
+      flex:1; height:4px; border-radius:999px; overflow:hidden;
+      background: transparent; border:none; margin-left:8px; display:none;
+    }
+    .tool-pulse::before{
+      content:""; display:block; height:100%; width:30%;
+      background: linear-gradient(90deg,#2f8bff,#41b2ff); animation: slide 1.2s infinite linear;
+    }
+    @keyframes slide{ 0%{ margin-left:-30%; } 100%{ margin-left:100%; } }
+
+    .tool-chips{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+    .chip{
+      font-size: .8rem; padding:4px 8px; border-radius:999px; border:1px solid rgba(0,0,0,0.15);
+      background: rgba(0,0,0,0.05); color:#333;
+    }
+    body.dark .chip{ border-color: rgba(255,255,255,0.18); background: rgba(255,255,255,0.08); color:#eee; }
+
+    .meta-note{ font-size:.82rem; opacity:.8; margin-top:6px; }
+
+    @media (max-width: 480px) {
+      .chat-wrapper{ width:100vw; height:100vh; border-radius:0; }
+      header.chat-header{ font-size:1.1rem; padding:16px 20px; }
+      form.chat-input-area{ padding:14px 18px; }
+      textarea#chat-input{ min-height:38px; font-size:.95rem; padding:12px 16px; }
+      button#send-btn{ width:40px; height:40px; font-size:18px; }
+      button#stop-btn{ width:28px; height:28px; font-size:16px; }
+      .message{ max-width:90%; font-size:.95rem; }
+      .thinking-wrap{ left:12px; right:12px; bottom:72px; }
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      .thinking-icon{ animation: none; }
+      .tool-pulse::before{ animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="chat-wrapper" role="main" aria-label="Chatbot Conversation">
+    <header class="chat-header">
+      <div>SLOT.NG-Smartphone Agent</div>
+      <button class="theme-toggle" aria-label="Toggle theme (light or dark)" id="themeButton" title="Toggle theme">☀️</button>
+    </header>
+
+    <section class="messages" id="messages" aria-live="polite" aria-atomic="false"></section>
+
+    <!-- Thinking/status overlay -->
+    <div class="thinking-wrap" aria-live="polite" aria-atomic="true">
+      <div id="thinkingBar" class="thinking-bar">
+        <div class="thinking-icon" aria-hidden="true"></div>
+        <div class="thinking-text" id="thinkingText">
+          <span id="thinkingPrimary">Thinking…</span>
+          <span id="thinkingElapsed" class="thinking-subtext" aria-hidden="true"></span>
+        </div>
+        <div id="toolPulse" class="tool-pulse" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <form class="chat-input-area" id="chatForm" autocomplete="off" novalidate method="post">
+      {% csrf_token %}
+      <textarea id="chat-input" name="user_query" placeholder="Type a message..." rows="1" required aria-label="Type your message"></textarea>
+      <div class="button-group">
+        <button type="submit" id="send-btn" disabled aria-label="Send message" title="Send message">➤</button>
+        <button type="button" id="stop-btn" aria-label="Stop generation" title="Stop response">×</button>
+      </div>
+    </form>
+  </main>
+
+  <script>
+    (() => {
+      const body = document.body;
+      const themeBtn = document.getElementById('themeButton');
+      const chatInput = document.getElementById('chat-input');
+      const sendBtn = document.getElementById('send-btn');
+      const stopBtn = document.getElementById('stop-btn');
+      const messages = document.getElementById('messages');
+      const chatForm = document.getElementById('chatForm');
+
+      const thinkingBar = document.getElementById('thinkingBar');
+      const thinkingPrimary = document.getElementById('thinkingPrimary');
+      const thinkingElapsed = document.getElementById('thinkingElapsed');
+      const toolPulse = document.getElementById('toolPulse');
+
+      let abortController = null;
+      let phaseInterval = null;     // <- rotates phases
+      let elapsedInterval = null;   // <- updates elapsed seconds
+      let startTime = null;
+      let lastThoughtSeconds = 0;
+
+      /* GPT-style copy */
+      const TOOL_UX = {
+        default: {
+          phases: ["analyzing your request..."]
+        },
+        websearch: {
+          phases: [
+            "anaylzing your request...",
+            "thinking longer for a better response...",
+            "searching the web for real-time response..."
+          ]
+        },
+        retriever: {
+          phases: [
+            "thinking longer for a better response...",
+            "searching my internal enterprise store...",
+            "retrieving the relevant information..."
+          ]
+        }
+      };
+
+      /* Heuristic: guess tool from the user query so we can show the right copy while waiting */
+      function guessToolFromQuery(qRaw){
+        const q = (qRaw || "").toLowerCase();
+        const isWeb = /(latest|news|price|deal|compare|near me|store|availability|today|yesterday|tomorrow|weather|score|live|rate|exchange|http|https|.com|.ng|open|watch|download|update|trending)/i.test(q);
+        const isRetriever = /(kb|knowledge\s*base|policy|handbook|internal|enterprise|docs?|document|pdf|manual|guide|store\s*doc|sop|training|wiki)/i.test(q);
+        if (isRetriever && !isWeb) return 'retriever';
+        if (isWeb) return 'websearch';
+        return null;
+      }
+
+      // Current tool context
+      let currentToolType = null;
+      function setCurrentTool(type){
+        const normalized = (type && TOOL_UX[type]) ? type : null;
+        currentToolType = normalized;
+        // Swap the phases immediately when the tool changes
+        if (thinkingBar.style.display === 'flex') {
+          startPhaseRotation(); // restart rotation with new phases
+          // Show pulse if a tool is active (visual hint)
+          toolPulse.style.display = currentToolType ? 'block' : 'none';
+        }
+      }
+
+      /* THEME */
+      function toggleTheme(){
+        const isDark = body.classList.toggle('dark');
+        themeBtn.textContent = isDark ? '⚫' : '⚪';
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      }
+      function loadTheme(){
+        const saved = localStorage.getItem('theme');
+        const autoDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = saved ? saved === 'dark' : autoDark;
+        body.classList.toggle('dark', isDark);
+        themeBtn.textContent = isDark ? '⚫' : '⚪';
+      }
+      themeBtn.addEventListener('click', toggleTheme);
+      loadTheme();
+
+      /* INPUT */
+      chatInput.addEventListener('input', () => {
+        sendBtn.disabled = chatInput.value.trim() === '';
+        autoResize(chatInput);
+      });
+      function autoResize(el){ el.style.height='auto'; el.style.height = Math.min(el.scrollHeight, 150) + 'px'; }
+      autoResize(chatInput);
+
+      function scrollBottom(){ messages.scrollTop = messages.scrollHeight; }
+
+      /* Messages */
+      function createMessage(text, sender){
+        const msg = document.createElement('article');
+        msg.classList.add('message', sender);
+        msg.setAttribute('role','article');
+        msg.setAttribute('aria-label', sender === 'user' ? 'User message' : 'AI message');
+        msg.textContent = text;
+        messages.appendChild(msg);
+        scrollBottom();
+        return msg;
+      }
+
+      async function typeWriter(element, text, speed = 25){
+        element.textContent = '';
+        const cursor = document.createElement('span'); cursor.className = 'cursor';
+        element.appendChild(cursor);
+        for(let i=0;i<text.length;i++){
+          if (abortController?.signal.aborted) break;
+          if (cursor.parentNode) element.textContent += text[i];
+          element.appendChild(cursor);
+          scrollBottom();
+          await new Promise(r => setTimeout(r, speed));
+        }
+        cursor.remove();
+      }
+
+      /* Short internal heuristic ONLY for super-short trivial asks */
+      function shouldUseMinimal(query){
+        const q = (query || '').trim();
+        const isUltraShort = q.length <= 30 && !/[?]/.test(q) && !/\b(latest|news|price|near me|today|http|https|doc|pdf|policy|manual|stock|weather)\b/i.test(q);
+        return isUltraShort;
+      }
+
+      /* Phase rotation (restarts whenever tool changes) */
+      function startPhaseRotation(){
+        const ux = TOOL_UX[currentToolType || 'default'];
+        const seq = (ux?.phases?.length ? ux.phases : ["thinking for a better answer"]).slice(0);
+        let idx = 0;
+
+        // Clear any existing rotation
+        if (phaseInterval) clearInterval(phaseInterval);
+
+        // Set first line immediately
+        thinkingPrimary.textContent = seq[idx];
+
+        // Rotate every 1300ms across the sequence
+        phaseInterval = setInterval(() => {
+          idx = (idx + 1) % seq.length;
+          thinkingPrimary.textContent = seq[idx];
+        }, 1300);
+      }
+
+      function showThinking(toolType = null, mode = 'phased'){
+        setCurrentTool(toolType); // sets and starts rotation
+        thinkingBar.style.display = 'flex';
+        thinkingElapsed.textContent = '';
+        thinkingElapsed.setAttribute('aria-hidden', 'true');
+        startTime = Date.now();
+
+        if (mode === 'minimal'){
+          // Even in minimal, show the live line for the guessed tool
+          const ux = TOOL_UX[currentToolType || 'default'];
+          thinkingPrimary.textContent = (ux.phases && ux.phases[0]) || "thinking for a better answer";
+          toolPulse.style.display = currentToolType ? 'block' : 'none';
+        } else {
+          startPhaseRotation();
+          toolPulse.style.display = currentToolType ? 'block' : 'none';
+        }
+
+        // After 6s, show elapsed
+        setTimeout(() => {
+          if (thinkingBar.style.display === 'flex') {
+            thinkingElapsed.removeAttribute('aria-hidden');
+            if (elapsedInterval) clearInterval(elapsedInterval);
+            elapsedInterval = setInterval(() => {
+              const elapsed = Math.floor((Date.now() - startTime) / 1000);
+              thinkingElapsed.textContent = `Thoughts for ${elapsed} second${elapsed !== 1 ? 's' : ''} used`;
+            }, 1000);
+          }
+        }, 6000);
+      }
+
+      function hideThinking(){
+        if (phaseInterval) clearInterval(phaseInterval);
+        if (elapsedInterval) clearInterval(elapsedInterval);
+        phaseInterval = null;
+        elapsedInterval = null;
+
+        lastThoughtSeconds = startTime ? Math.max(0, Math.floor((Date.now() - startTime) / 1000)) : 0;
+        thinkingBar.style.display = 'none';
+        toolPulse.style.display = 'none';
+        thinkingPrimary.textContent = '';
+        thinkingElapsed.textContent = '';
+        startTime = null;
+      }
+
+      function stopGeneration(){
+        if (abortController) abortController.abort();
+        stopBtn.style.display = 'none';
+        sendBtn.disabled = false;
+        chatInput.disabled = false;
+        chatInput.focus();
+        hideThinking();
+      }
+      stopBtn.addEventListener('click', stopGeneration);
+
+      // Live toolcall from backend
+      // window.dispatchEvent(new CustomEvent('toolcall', { detail: { type:'websearch', status:'start' } }))
+      window.addEventListener('toolcall', (e) => {
+        const { type, status } = e.detail || {};
+        if (!status) return;
+        if (status === 'start'){
+          if (thinkingBar.style.display !== 'flex') {
+            showThinking(type, 'phased');
+          } else {
+            setCurrentTool(type); // hot-swap phases immediately
+          }
+        } else if (status === 'end'){
+          // Optional “complete” blip (kept subtle)
+          const prev = thinkingPrimary.textContent;
+          thinkingPrimary.textContent = (type === 'websearch')
+            ? "Web search complete."
+            : (type === 'retriever')
+              ? "Relevant documents found."
+              : "Tool complete.";
+          setTimeout(() => { thinkingPrimary.textContent = prev; }, 600);
+        }
+      });
+
+      /* SUBMIT / FETCH */
+      chatForm.addEventListener('submit', sendMessage);
+      chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          if (!sendBtn.disabled) sendMessage(e);
+        }
+      });
+
+      async function sendMessage(event){
+        event.preventDefault();
+        const userText = chatInput.value.trim();
+        if (!userText) return;
+
+        // User bubble
+        createMessage(userText, 'user');
+        chatInput.value = '';
+        sendBtn.disabled = true;
+        chatInput.disabled = true;
+        autoResize(chatInput);
+
+        // Guess tool immediately so the right copy shows while we wait.
+        const guessedTool = guessToolFromQuery(userText);
+        const minimal = shouldUseMinimal(userText);
+
+        stopBtn.style.display = 'flex';
+        showThinking(guessedTool, minimal ? 'minimal' : 'phased');
+
+        abortController = new AbortController();
+
+        try{
+          const csrf = document.querySelector('input[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken');
+          const resp = await fetch("{% url 'chatUI' %}", {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'X-CSRFToken': csrf
+            },
+            body: `user_query=${encodeURIComponent(userText)}`,
+            signal: abortController.signal
+          });
+          if(!resp.ok) throw new Error('Network response was not ok');
+          const data = await resp.json();
+          if (abortController.signal.aborted) return;
+
+          // If backend indicates actual tool(s), snap to them now.
+          if (data?.tool_calls){
+            const tools = normalizeTools(data.tool_calls);
+            if (tools.includes('websearch')) {
+              setCurrentTool('websearch');
+            } else if (tools.includes('retriever')) {
+              setCurrentTool('retriever');
+            } else {
+              setCurrentTool(null);
+            }
+          }
+
+          hideThinking();
+
+          // AI message as plain text
+          const aiEl = createMessage('', 'ai');
+          await typeWriter(aiEl, data.response || '');
+
+          // Post-thoughts meta line
+          if (lastThoughtSeconds > 0){
+            const meta = document.createElement('div');
+            meta.className = 'meta-note';
+            meta.textContent = `Thoughts for ${lastThoughtSeconds} second${lastThoughtSeconds !== 1 ? 's' : ''} used`;
+            aiEl.appendChild(meta);
+          }
+
+          // Tool chips with the same phrasing
+          if (data.tool_calls) {
+            const tools = normalizeTools(data.tool_calls);
+            if (tools.length){
+              const chips = document.createElement('div');
+              chips.className = 'tool-chips';
+              tools.forEach(t => {
+                const chip = document.createElement('span');
+                chip.className = 'chip';
+                chip.textContent = t === 'websearch'
+                  ? '🔧 searching the web for real-time response'
+                  : t === 'retriever'
+                    ? '🔧 searching my internal enterprise store'
+                    : `🔧 ${t}`;
+                chips.appendChild(chip);
+              });
+              aiEl.appendChild(chips);
+            }
+          }
+
+        } catch (err){
+          if (abortController?.signal?.aborted){
+            createMessage("Generation stopped.", 'ai');
+          } else {
+            createMessage("Sorry, something went wrong. Please try again.", 'ai');
+            console.error(err);
+          }
+        } finally{
+          abortController = null;
+          stopBtn.style.display = 'none';
+          sendBtn.disabled = false;
+          chatInput.disabled = false;
+          chatInput.focus();
+          hideThinking();
+        }
+      }
+
+      function normalizeTools(toolCalls){
+        try{
+          const arr = Array.isArray(toolCalls) ? toolCalls : [toolCalls];
+          const names = arr.map(t => {
+            if (!t) return null;
+            if (typeof t === 'string') return t;
+            if (t.name) return t.name;
+            if (t.tool) return t.tool;
+            if (t.type) return t.type;
+            if (t?.__class__) return t.__class__;
+            return null;
+          }).filter(Boolean);
+          return [...new Set(names)];
+        } catch { return []; }
+      }
+
+      function getCookie(name){
+        const cookies = document.cookie.split(';').map(c => c.trim());
+        for(const cookie of cookies){
+          if (cookie.startsWith(name + '=')) return decodeURIComponent(cookie.substring(name.length + 1));
+        }
+        return null;
+      }
+    })();
+  </script>
+</body>
+</html>
