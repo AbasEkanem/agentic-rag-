@@ -1,6 +1,6 @@
 # dealing with the imports 
 # importing langchain library for loading, splitting, storing, preprocessing of documents and creating of tools for the AI Agent
-from langchain_community.document_loaders import WebBaseLoader
+from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_core.tools import tool
@@ -47,23 +47,14 @@ if os.path.exists(FAISS_INDEX_PATH) and os.path.isdir(FAISS_INDEX_PATH):
     print("memory index loaded successfully.")
 else:
     print("memory index not found. Building and saving new index...")
-urls = [
-            "https://slot.ng/index.php/phones-and-tables/phones/smartphone.html?srsltid=AfmBOoqVghEaa1VCAy7u6eBxEmR0V2CNaNavID2BMvUXyrZCDDbp4Vdn&product_list_limit=72",
-            "https://slot.ng/index.php/phones-and-tables/phones/smartphone.html?p=2&product_list_limit=72&srsltid=AfmBOoqVghEaa1VCAy7u6eBxEmR0V2CNaNavID2BMvUXyrZCDDbp4Vdn",
-            "https://ong.ng/c_mobile-phones?utm_source=google_adw&utm_medium=149960035115&utm_campaign=20153734963&utm_term=744637805936&gad_source=1&gad_campaignid=20153734963&gbraid=0AAAAApRb7LDWUNrteGZbIgqlWZRwZ_DRy&gclid=Cj0KCQjw8p7GBhCjARIsAEhghZ1j80jBEAdNGEEDAtXZRv47zZrwcpzHnSzerzh4fxHfLY_UHjSq69QaAlzUEALw_wcB",
-            "https://ong.ng/c_mobile-phones?utm_source=google_adw&utm_medium=149960035115&utm_campaign=20153734963&utm_term=744637805936&gad_source=1&gad_campaignid=20153734963&gbraid=0AAAAApRb7LDWUNrteGZbIgqlWZRwZ_DRy&gclid=Cj0KCQjw8p7GBhCjARIsAEhghZ1j80jBEAdNGEEDAtXZRv47zZrwcpzHnSzerzh4fxHfLY_UHjSq69QaAlzUEALw_wcB&page=2",
-            "https://ong.ng/c_mobile-phones?utm_source=google_adw&utm_medium=149960035115&utm_campaign=20153734963&utm_term=744637805936&gad_source=1&gad_campaignid=20153734963&gbraid=0AAAAApRb7LDWUNrteGZbIgqlWZRwZ_DRy&gclid=Cj0KCQjw8p7GBhCjARIsAEhghZ1j80jBEAdNGEEDAtXZRv47zZrwcpzHnSzerzh4fxHfLY_UHjSq69QaAlzUEALw_wcB&page=3",
-            "https://ong.ng/c_mobile-phones?utm_source=google_adw&utm_medium=149960035115&utm_campaign=20153734963&utm_term=744637805936&gad_source=1&gad_campaignid=20153734963&gbraid=0AAAAApRb7LDWUNrteGZbIgqlWZRwZ_DRy&gclid=Cj0KCQjw8p7GBhCjARIsAEhghZ1j80jBEAdNGEEDAtXZRv47zZrwcpzHnSzerzh4fxHfLY_UHjSq69QaAlzUEALw_wcB&page=4",
-            "https://ong.ng/c_mobile-phones?utm_source=google_adw&utm_medium=149960035115&utm_campaign=20153734963&utm_term=744637805936&gad_source=1&gad_campaignid=20153734963&gbraid=0AAAAApRb7LDWUNrteGZbIgqlWZRwZ_DRy&gclid=Cj0KCQjw8p7GBhCjARIsAEhghZ1j80jBEAdNGEEDAtXZRv47zZrwcpzHnSzerzh4fxHfLY_UHjSq69QaAlzUEALw_wcB&page=5",
-            "https://ong.ng/c_mobile-phones?utm_source=google_adw&utm_medium=149960035115&utm_campaign=20153734963&utm_term=744637805936&gad_source=1&gad_campaignid=20153734963&gbraid=0AAAAApRb7LDWUNrteGZbIgqlWZRwZ_DRy&gclid=Cj0KCQjw8p7GBhCjARIsAEhghZ1j80jBEAdNGEEDAtXZRv47zZrwcpzHnSzerzh4fxHfLY_UHjSq69QaAlzUEALw_wcB&page=6"
-        ]
-loader = WebBaseLoader(urls)
-raw_data = loader.load()
-splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-chunks = splitter.split_documents(raw_data)
-vectorStore = FAISS.from_documents(chunks, embedding_model)
-vectorStore.save_local(FAISS_INDEX_PATH)
-print(f"memory index built and saved to {FAISS_INDEX_PATH}.")
+    file_path = r"C:\\Users\\USER\\Desktop\\slot_pages.pdf" 
+    loader = PyPDFLoader(file_path)
+    raw_data = loader.load()
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    chunks = splitter.split_documents(raw_data)
+    vectorStore = FAISS.from_documents(chunks, embedding_model)
+    vectorStore.save_local(FAISS_INDEX_PATH)
+    print(f"memory index built and saved to {FAISS_INDEX_PATH}.")
 
 # step4: creating the tools using the @tool decorator from langchain_core.tools
 # the retriever tool
@@ -179,3 +170,4 @@ agents_memory = InMemorySaver()
 config = {"configurable":{"thread_id": "thread_A"}}
 # compile the graph
 compiler = graph_builder.compile(checkpointer=agents_memory)
+
